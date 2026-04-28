@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Blob from '../components/Blob';
@@ -9,9 +9,19 @@ import { AMBASSADORS } from '../data/ambassadors';
 const TOP_DEMOS = AMBASSADORS.slice(0, 4);
 
 export default function Login() {
-  const [demoOpen, setDemoOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [accessReady, setAccessReady] = useState<boolean | null>(null);
   const nav = useNavigate();
+
+  // Detect if CF Access is set up for /dashboard
+  useEffect(() => {
+    fetch('/cdn-cgi/access/get-identity', { credentials: 'include' })
+      .then(r => {
+        const ct = r.headers.get('content-type') || '';
+        setAccessReady(r.ok && ct.includes('application/json'));
+      })
+      .catch(() => setAccessReady(false));
+  }, []);
 
   async function tryGoogle() {
     setBusy(true);
@@ -24,10 +34,14 @@ export default function Login() {
           return;
         }
       }
-      // Try the Access login URL — works once Access is wired
-      window.location.href = ACCESS_LOGIN_URL;
+      // Access not configured yet → fallback to top demo so user can enter
+      const top = AMBASSADORS[0];
+      setDemoUser({ ambassadorId: top.id, name: top.name, email: top.email });
+      nav('/dashboard');
     } catch {
-      window.location.href = ACCESS_LOGIN_URL;
+      const top = AMBASSADORS[0];
+      setDemoUser({ ambassadorId: top.id, name: top.name, email: top.email });
+      nav('/dashboard');
     }
   }
 
@@ -66,33 +80,27 @@ export default function Login() {
             <div className="flex-1 h-px bg-white/10"/>
           </div>
 
-          <button
-            onClick={() => setDemoOpen(v => !v)}
-            className="w-full text-sm text-white/70 hover:text-white transition-colors flex items-center justify-center gap-2 py-2"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-            Explorar como embajador (demo)
-          </button>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-white/50 font-bold mb-3 flex items-center justify-between">
+            <span>Entrar como embajador</span>
+            {accessReady === false && <span className="text-amber-300 normal-case tracking-normal text-[10px]">CF Access aún no conectado · modo preview</span>}
+          </div>
 
-          {demoOpen && (
-            <div className="mt-3 rounded-2xl bg-white/[0.04] border border-white/8 p-3 space-y-2 animate-fadeUp">
-              {TOP_DEMOS.map(a => (
-                <button
-                  key={a.id}
-                  onClick={() => pickDemo(a.id, a.name, a.email)}
-                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors text-left"
-                >
-                  <img src={a.photo} alt={a.name} loading="lazy" className="w-9 h-9 rounded-full object-cover ring-1 ring-white/10"/>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{a.name}</div>
-                    <div className="text-[11px] text-white/50">Rank #{a.rank} · {a.country} · {a.track}</div>
-                  </div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CFFF04" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-                </button>
-              ))}
-              <div className="text-[10px] text-white/40 px-2 pt-1">El modo demo no escribe nada en producción — es solo para previsualizar la experiencia.</div>
-            </div>
-          )}
+          <div className="rounded-2xl bg-white/[0.04] border border-white/8 p-2 space-y-1">
+            {TOP_DEMOS.map(a => (
+              <button
+                key={a.id}
+                onClick={() => pickDemo(a.id, a.name, a.email)}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.07] transition-colors text-left"
+              >
+                <img src={a.photo} alt={a.name} loading="lazy" className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10"/>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{a.name}</div>
+                  <div className="text-[11px] text-white/50">Rank #{a.rank} · {a.country} · {a.track} · ${a.commission.toLocaleString()}</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CFFF04" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </button>
+            ))}
+          </div>
 
           <div className="mt-8 text-[11px] text-white/40 text-center">
             ¿Aún no eres embajador? <a href="mailto:embajadores@getpana.app" className="text-pana-lime hover:underline">Aplica al programa</a>
