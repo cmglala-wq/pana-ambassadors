@@ -112,7 +112,7 @@ export default function Landing() {
               Aplicar al programa
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
             </a>
-            <Link to="/dashboard" className="btn-ghost text-base">Soy embajador</Link>
+            <Link to="/login" className="btn-ghost text-base">Soy embajador · Iniciar sesión</Link>
           </div>
 
           {/* live counters */}
@@ -256,7 +256,7 @@ export default function Landing() {
                   Aplicar ahora
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                 </a>
-                <Link to="/dashboard" className="btn-ghost text-base">Acceder al portal</Link>
+                <Link to="/login" className="btn-ghost text-base">Acceder al portal</Link>
               </div>
               <div className="mt-8 text-xs text-white/40">Privado y confidencial · Sujeto a aprobación</div>
             </div>
