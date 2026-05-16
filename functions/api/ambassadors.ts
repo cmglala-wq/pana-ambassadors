@@ -2,16 +2,32 @@
 // Source: BigQuery `panaapp-16ce3.adjust.*`, joined via `tracker_id` (FK to tracker._fivetran_id).
 // Falls back to {source:'mock',ambassadors:[]} if upstream fails so the frontend can show its bundled mock.
 
-interface Env {}
+interface Env {
+  CF_ACCESS_CLIENT_ID?: string;
+  CF_ACCESS_CLIENT_SECRET?: string;
+}
 
 const OPS_BASE = 'https://pana-ops-dashboard.pages.dev/api/metabase';
 
 type Row = (string | number | null)[];
 type ApiResp = { cols: { name: string }[]; rows: Row[] } | { error: string };
 
-async function fetchQuery(queryId: string): Promise<{ cols: string[]; rows: Row[] } | null> {
+function authHeaders(env: Env): Record<string, string> {
+  if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
+    return {
+      'CF-Access-Client-Id': env.CF_ACCESS_CLIENT_ID,
+      'CF-Access-Client-Secret': env.CF_ACCESS_CLIENT_SECRET
+    };
+  }
+  return {};
+}
+
+async function fetchQuery(queryId: string, env: Env): Promise<{ cols: string[]; rows: Row[] } | null> {
   try {
-    const r = await fetch(`${OPS_BASE}/${queryId}`, { cf: { cacheTtl: 60 } as any });
+    const r = await fetch(`${OPS_BASE}/${queryId}`, {
+      headers: authHeaders(env),
+      cf: { cacheTtl: 60 } as any
+    });
     if (!r.ok) return null;
     const j = (await r.json()) as ApiResp;
     if ('error' in j) return null;
@@ -45,14 +61,15 @@ function deriveBadges(approved: number, installs: number, events: number, daysAc
   return out;
 }
 
-export const onRequestGet: PagesFunction<Env> = async () => {
+export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+  const env = ctx.env;
   const [perf, monthly, byCountry, perfMonthly, perfDaily, panaMapping] = await Promise.all([
-    fetchQuery('ambassadors-performance'),
-    fetchQuery('ambassadors-monthly'),
-    fetchQuery('ambassadors-by-country'),
-    fetchQuery('ambassadors-performance-monthly'),
-    fetchQuery('ambassadors-performance-daily'),
-    fetchQuery('ambassadors-pana-mapping')
+    fetchQuery('ambassadors-performance', env),
+    fetchQuery('ambassadors-monthly', env),
+    fetchQuery('ambassadors-by-country', env),
+    fetchQuery('ambassadors-performance-monthly', env),
+    fetchQuery('ambassadors-performance-daily', env),
+    fetchQuery('ambassadors-pana-mapping', env)
   ]);
 
   if (!perf || perf.rows.length === 0) {

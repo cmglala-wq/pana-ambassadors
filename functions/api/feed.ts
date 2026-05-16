@@ -2,9 +2,22 @@
 // Pulls last 14d of installs + in_app_events from ops dashboard, formats them
 // into a human-readable feed for the gamified dashboard.
 
-interface Env {}
+interface Env {
+  CF_ACCESS_CLIENT_ID?: string;
+  CF_ACCESS_CLIENT_SECRET?: string;
+}
 
 const OPS_BASE = 'https://pana-ops-dashboard.pages.dev/api/metabase';
+
+function authHeaders(env: Env): Record<string, string> {
+  if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
+    return {
+      'CF-Access-Client-Id': env.CF_ACCESS_CLIENT_ID,
+      'CF-Access-Client-Secret': env.CF_ACCESS_CLIENT_SECRET
+    };
+  }
+  return {};
+}
 
 type Row = (string | number | null)[];
 type ApiResp = { cols: { name: string }[]; rows: Row[] } | { error: string };
@@ -25,9 +38,12 @@ function fmtEvent(eventName: string) {
   return { icon: '✦', verb: eventName.replace(/([A-Z])/g, ' $1').trim().toLowerCase(), weight: 15 };
 }
 
-export const onRequestGet: PagesFunction<Env> = async () => {
+export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   try {
-    const r = await fetch(`${OPS_BASE}/ambassadors-recent-activity`, { cf: { cacheTtl: 30 } as any });
+    const r = await fetch(`${OPS_BASE}/ambassadors-recent-activity`, {
+      headers: authHeaders(ctx.env),
+      cf: { cacheTtl: 30 } as any
+    });
     if (!r.ok) return json({ source: 'mock', events: [] });
     const j = (await r.json()) as ApiResp;
     if ('error' in j) return json({ source: 'mock', events: [] });
