@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
-import { SessionUser, clearDemoUser, setAdmin } from '../lib/session';
+import { SessionUser, clearDemoUser, setAdmin, getCurrentAmbassador } from '../lib/session';
 
 export default function UserMenu({ user }: { user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
+  const amb = getCurrentAmbassador(user);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -38,7 +39,8 @@ export default function UserMenu({ user }: { user: SessionUser }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 glass-strong rounded-2xl p-2 shadow-2xl shadow-black/60 z-50 animate-fadeUp">
+        <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl p-2 shadow-2xl shadow-black/80 z-50 animate-fadeUp border border-white/10"
+             style={{ background: 'rgba(8, 18, 34, 0.97)', backdropFilter: 'blur(20px)' }}>
           <div className="flex items-center gap-3 p-3">
             <Avatar src={user.photo} name={user.name} size={40} ring="lime"/>
             <div className="min-w-0">
@@ -51,28 +53,38 @@ export default function UserMenu({ user }: { user: SessionUser }) {
           <div className="divider my-1"/>
 
           <MenuItem icon="👤" label="Mi perfil" onClick={() => { setOpen(false); nav('/dashboard'); }}/>
+          <MenuItem
+            icon="📄"
+            label="Documentos"
+            hint={amb.contract.status === 'signed' ? 'firmado' : 'pendiente'}
+            onClick={() => {
+              setOpen(false);
+              window.open(amb.contract.fileUrl, '_blank', 'noopener');
+            }}
+          />
           <MenuItem icon="🔔" label="Notificaciones" hint="3" onClick={() => setOpen(false)}/>
 
           <div className="divider my-1"/>
 
           <MenuItem
-            icon="👑"
-            label="Vista admin"
-            hint={user.isAdmin ? 'activo' : ''}
-            highlight
-            onClick={() => { setAdmin(true); setOpen(false); nav('/admin'); }}
+            icon={
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            }
+            label="Salir"
+            danger
+            onClick={logout}
           />
-
-          <div className="divider my-1"/>
-
-          <MenuItem icon="↗" label={user.source === 'access' ? 'Cerrar sesión' : 'Salir del demo'} danger onClick={logout}/>
         </div>
       )}
     </div>
   );
 }
 
-function MenuItem({ icon, label, hint, onClick, highlight, danger }: { icon: string; label: string; hint?: string; onClick: () => void; highlight?: boolean; danger?: boolean }) {
+function MenuItem({ icon, label, hint, onClick, highlight, danger }: { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; highlight?: boolean; danger?: boolean }) {
   return (
     <button
       onClick={onClick}

@@ -3,6 +3,7 @@ import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Blob from '../components/Blob';
 import Sparkle from '../components/Sparkle';
+import MobilePreview from '../components/MobilePreview';
 import { useEffect, useState } from 'react';
 
 const TRACKS = [
@@ -81,61 +82,82 @@ export default function Landing() {
       <NavBar />
 
       {/* HERO */}
-      <section className="relative pt-36 pb-24 overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-grid opacity-30"/>
-          <Blob className="absolute -top-20 -right-32 w-[640px] opacity-70 animate-floaty" tone="lime"/>
-          <Blob className="absolute top-40 -left-40 w-[520px] opacity-60 animate-floaty [animation-delay:1.5s]" tone="blue"/>
-          <div className="absolute top-1/3 right-1/4">
-            <Sparkle className="w-6 animate-spinSlow" color="#CFFF04"/>
-          </div>
+      <section className="relative pt-36 pb-0 overflow-hidden">
+        <div className="atmosphere atmosphere--hero"/>
+        <div className="absolute inset-0 -z-10 bg-grid opacity-25 pointer-events-none"/>
+        <div className="absolute top-1/3 right-1/4 -z-10 pointer-events-none">
+          <Sparkle className="w-6 animate-spinSlow" color="#CFFF04"/>
         </div>
 
         <div className="mx-auto max-w-6xl px-5">
-          <div className="chip mb-6 animate-fadeUp">
-            <span className="dot"/>
-            Programa de Embajadores · 2026
-          </div>
+          <div className="grid lg:grid-cols-[1.5fr,1fr] gap-12 lg:gap-8 items-center">
+            <div>
+              <div className="chip mb-6 animate-fadeUp">
+                <span className="dot"/>
+                Programa de Embajadores · 2026
+              </div>
 
-          <h1 className="h-display text-[42px] sm:text-[64px] md:text-[88px] lg:text-[112px] max-w-5xl animate-fadeUp [animation-delay:80ms]">
-            Convierte tu <span className="gradient-text">comunidad</span><br/>
-            en oportunidad.
-          </h1>
+              <h1 className="h-display text-[42px] sm:text-[64px] md:text-[80px] lg:text-[92px] animate-fadeUp [animation-delay:80ms]">
+                Convierte tu <span className="gradient-text">comunidad</span><br/>
+                en oportunidad.
+              </h1>
 
-          <p className="mt-6 max-w-2xl text-lg md:text-xl text-white/70 animate-fadeUp [animation-delay:160ms]">
-            Pana es la fintech sin fronteras que conecta personas y empresas con cuentas USA de uso global.
-            Si te lee, te escucha o trabaja contigo — gana <strong className="text-pana-lime">$10 USD</strong> por cada cuenta abierta y activa.
-          </p>
+              <p className="mt-6 max-w-xl text-lg md:text-xl text-white/70 animate-fadeUp [animation-delay:160ms]">
+                Pana es la fintech sin fronteras que conecta personas y empresas con cuentas USA de uso global.
+                Si te lee, te escucha o trabaja contigo — gana <strong className="text-pana-lime">$10 USD</strong> por cada cuenta abierta y activa.
+              </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-3 animate-fadeUp [animation-delay:240ms]">
-            <a href="#como" className="btn-lime text-base">
-              Aplicar al programa
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </a>
-            <Link to="/login" className="btn-ghost text-base">Soy embajador · Iniciar sesión</Link>
+              <div className="mt-9 flex flex-wrap items-center gap-3 animate-fadeUp [animation-delay:240ms]">
+                <a href="#como" className="btn-lime text-base">
+                  Aplicar al programa
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </a>
+                <Link to="/login" className="btn-ghost text-base">Soy embajador · Iniciar sesión</Link>
+              </div>
+            </div>
+
+            {/* Mobile preview */}
+            <div className="hidden lg:block animate-fadeUp [animation-delay:320ms]">
+              <MobilePreview/>
+            </div>
           </div>
 
           {/* live counters */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-3 gap-3 animate-fadeUp [animation-delay:320ms]">
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-3 gap-3 animate-fadeUp [animation-delay:400ms]">
             <Stat value={count.amb} suffix="+" label="Embajadores activos"/>
             <Stat value={count.refs} suffix="+" label="Cuentas referidas"/>
             <Stat value={`$${count.paid.toLocaleString()}`} label="Pagados a la red"/>
           </div>
+
+          {/* Mobile-only preview (below fold) */}
+          <div className="lg:hidden mt-16 animate-fadeUp">
+            <div className="text-center mb-6">
+              <span className="chip mb-3"><span className="dot"/> Vista del embajador</span>
+              <p className="text-white/60 text-sm">Así se ve tu portal en el móvil</p>
+            </div>
+            <MobilePreview/>
+          </div>
         </div>
 
         {/* Marquee */}
-        <div className="mt-24 border-y border-white/5 py-5 overflow-hidden">
-          <div className="marquee text-2xl md:text-4xl font-display text-white/15">
+        <div className="mt-12 border-y border-white/10 py-5 overflow-hidden">
+          <div className="marquee text-2xl md:text-4xl font-display text-white/55">
             {[...Array(2)].map((_, i) => (
-              <span key={i} className="flex gap-12 px-6">
-                <span>★ Pana Global</span>
-                <span>· Sin fronteras</span>
-                <span>· $10 / cuenta</span>
-                <span>· Mes a mes</span>
-                <span>· Pago directo</span>
-                <span>· LATAM + USA</span>
-                <span>· 2026</span>
+              <span key={i} className="flex gap-10 px-6 items-center">
                 <span className="text-pana-lime">★</span>
+                <span>Pana Global</span>
+                <span className="text-pana-lime/70">·</span>
+                <span>Sin fronteras</span>
+                <span className="text-pana-lime/70">·</span>
+                <span className="text-pana-lime">$10 / cuenta</span>
+                <span className="text-pana-lime/70">·</span>
+                <span>Mes a mes</span>
+                <span className="text-pana-lime/70">·</span>
+                <span>Pago directo</span>
+                <span className="text-pana-lime/70">·</span>
+                <span>LATAM + USA</span>
+                <span className="text-pana-lime/70">·</span>
+                <span>2026</span>
               </span>
             ))}
           </div>
@@ -143,19 +165,14 @@ export default function Landing() {
       </section>
 
       {/* OVERVIEW */}
-      <section id="programa" className="scroll-mt-nav py-20 md:py-28">
+      <section id="programa" className="scroll-mt-nav py-10 md:py-14 relative overflow-hidden">
+        <div className="atmosphere atmosphere--lime"/>
         <div className="mx-auto max-w-6xl px-5">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
-            <div>
-              <span className="chip mb-4">El programa</span>
-              <h2 className="h-display text-4xl md:text-6xl max-w-2xl">
-                Una red que <span className="gradient-text">crece contigo</span>.
-              </h2>
-            </div>
-            <p className="max-w-md text-white/70">
-              Más allá de generar ingresos, ofreces a tu comunidad soluciones útiles. Cuentas USA, pagos sin fronteras y herramientas que mejoran su vida — gracias a ti.
-            </p>
-          </div>
+          <SectionHead
+            kicker="El programa"
+            title={<>Una red que <span className="gradient-text">crece contigo</span>.</>}
+            lead="Más allá de generar ingresos, ofreces a tu comunidad soluciones útiles. Cuentas USA, pagos sin fronteras y herramientas que mejoran su vida — gracias a ti."
+          />
 
           <div className="grid md:grid-cols-3 gap-4">
             <FeatureCard kicker="Quiénes somos" title="Pana Global" body="Fintech inclusiva con cuentas bancarias USA de uso internacional. Pagos, envíos y recibos sin fronteras."/>
@@ -166,13 +183,14 @@ export default function Landing() {
       </section>
 
       {/* BENEFITS */}
-      <section id="beneficios" className="scroll-mt-nav py-20 md:py-28 relative overflow-hidden">
-        <Blob className="absolute -right-40 top-20 w-[500px] opacity-40 animate-floaty" tone="blue"/>
+      <section id="beneficios" className="scroll-mt-nav py-10 md:py-14 relative overflow-hidden">
+        <div className="atmosphere atmosphere--blue"/>
         <div className="mx-auto max-w-6xl px-5 relative">
-          <span className="chip mb-4">Beneficios</span>
-          <h2 className="h-display text-4xl md:text-6xl max-w-3xl mb-12">
-            No es solo dinero. <span className="text-white/40">Es propósito.</span>
-          </h2>
+          <SectionHead
+            kicker="Beneficios"
+            title={<>No es solo dinero. <span className="text-white/40">Es propósito.</span></>}
+            lead="Recomendar Pana es abrirle a tu comunidad herramientas que ya estabas usando — solo que ahora también ganas tú."
+          />
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {BENEFITS.map((b, i) => (
@@ -190,19 +208,14 @@ export default function Landing() {
       </section>
 
       {/* TRACKS */}
-      <section id="tracks" className="scroll-mt-nav py-20 md:py-28 relative">
+      <section id="tracks" className="scroll-mt-nav py-10 md:py-14 relative overflow-hidden">
+        <div className="atmosphere atmosphere--mix"/>
         <div className="mx-auto max-w-6xl px-5">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
-            <div>
-              <span className="chip mb-4">Modalidades</span>
-              <h2 className="h-display text-4xl md:text-6xl max-w-2xl">
-                Tres caminos. <span className="gradient-text">Una sola red.</span>
-              </h2>
-            </div>
-            <p className="max-w-md text-white/70">
-              Elige el que mejor se ajusta a tu perfil. Puedes empezar como Embajador y subir a Influencer cuando estés listo.
-            </p>
-          </div>
+          <SectionHead
+            kicker="Modalidades"
+            title={<>Tres caminos. <span className="gradient-text">Una sola red.</span></>}
+            lead="Elige el que mejor se ajusta a tu perfil. Puedes empezar como Embajador y subir a Influencer cuando estés listo."
+          />
 
           <div className="grid md:grid-cols-3 gap-4">
             {TRACKS.map((t, i) => (
@@ -222,8 +235,8 @@ export default function Landing() {
       </section>
 
       {/* HOW TO APPLY */}
-      <section id="como" className="scroll-mt-nav py-20 md:py-28 relative overflow-hidden">
-        <Blob className="absolute -left-40 top-20 w-[500px] opacity-40 animate-floaty [animation-delay:2s]" tone="lime"/>
+      <section id="como" className="scroll-mt-nav py-10 md:py-14 relative overflow-hidden">
+        <div className="atmosphere atmosphere--lime"/>
         <div className="mx-auto max-w-6xl px-5 relative">
           <div className="text-center mb-14">
             <span className="chip mb-4">Cómo aplicar</span>
@@ -265,6 +278,18 @@ export default function Landing() {
       </section>
 
       <Footer/>
+    </div>
+  );
+}
+
+function SectionHead({ kicker, title, lead }: { kicker: string; title: React.ReactNode; lead?: React.ReactNode }) {
+  return (
+    <div className="grid md:grid-cols-[1.4fr,1fr] gap-6 md:gap-12 items-end mb-12 md:mb-16">
+      <div>
+        <span className="chip mb-4">{kicker}</span>
+        <h2 className="h-display text-4xl md:text-6xl">{title}</h2>
+      </div>
+      {lead && <p className="text-white/70 md:pb-2 md:max-w-md">{lead}</p>}
     </div>
   );
 }

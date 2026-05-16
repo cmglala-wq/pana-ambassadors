@@ -43,14 +43,21 @@ export interface Payment {
   approvedAccounts: number;
 }
 
-const COUNTRY_NAME: Record<Country, string> = {
+const COUNTRY_NAME: Record<string, string> = {
   DO: 'República Dominicana', MX: 'México', GT: 'Guatemala',
-  CO: 'Colombia', HN: 'Honduras', SV: 'El Salvador', US: 'Estados Unidos'
+  CO: 'Colombia', HN: 'Honduras', SV: 'El Salvador', US: 'Estados Unidos',
+  AR: 'Argentina', CL: 'Chile', PE: 'Perú', VE: 'Venezuela', EC: 'Ecuador',
+  CR: 'Costa Rica', PA: 'Panamá', NI: 'Nicaragua', BO: 'Bolivia', UY: 'Uruguay',
+  PY: 'Paraguay', BR: 'Brasil', ES: 'España'
 };
-const COUNTRY_FLAG: Record<Country, string> = { DO: '🇩🇴', MX: '🇲🇽', GT: '🇬🇹', CO: '🇨🇴', HN: '🇭🇳', SV: '🇸🇻', US: '🇺🇸' };
+const COUNTRY_FLAG: Record<string, string> = {
+  DO: '🇩🇴', MX: '🇲🇽', GT: '🇬🇹', CO: '🇨🇴', HN: '🇭🇳', SV: '🇸🇻', US: '🇺🇸',
+  AR: '🇦🇷', CL: '🇨🇱', PE: '🇵🇪', VE: '🇻🇪', EC: '🇪🇨', CR: '🇨🇷', PA: '🇵🇦',
+  NI: '🇳🇮', BO: '🇧🇴', UY: '🇺🇾', PY: '🇵🇾', BR: '🇧🇷', ES: '🇪🇸'
+};
 
-export const countryName = (c: Country) => COUNTRY_NAME[c];
-export const countryFlag = (c: Country) => COUNTRY_FLAG[c];
+export const countryName = (c: Country | string | null | undefined) => c ? (COUNTRY_NAME[c as string] || c) : 'Sin país';
+export const countryFlag = (c: Country | string | null | undefined) => c ? (COUNTRY_FLAG[c as string] || '🌎') : '—';
 
 const photoF = (n: number) => `https://randomuser.me/api/portraits/women/${n}.jpg`;
 const photoM = (n: number) => `https://randomuser.me/api/portraits/men/${n}.jpg`;

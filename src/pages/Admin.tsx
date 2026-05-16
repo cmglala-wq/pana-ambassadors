@@ -5,13 +5,17 @@ import Footer from '../components/Footer';
 import Avatar from '../components/Avatar';
 import SimpleChart from '../components/SimpleChart';
 import { resolveSession, SessionUser, setAdmin } from '../lib/session';
+import { useAmbassadors, viewForRange } from '../lib/useAmbassadors';
+import DateRangePicker, { DEFAULT_RANGE, fmtRange, type DateRange } from '../components/DateRangePicker';
 import {
-  AMBASSADORS, COUNTRY_BREAKDOWN, MONTHLY_GROWTH, TOTALS, ALL_PAYMENTS, PAYMENTS_BY_MONTH,
+  ALL_PAYMENTS, PAYMENTS_BY_MONTH,
   countryFlag, type Country, type Track, type ContractStatus, type Ambassador
 } from '../data/ambassadors';
+import { CONTENT_TOTALS } from '../data/content';
+import ContentBoard from '../components/ContentBoard';
 
 type SortKey = 'rank' | 'name' | 'country' | 'joinedAt' | 'installs' | 'approved' | 'commission';
-type Tab = 'ambassadors' | 'contracts' | 'payments';
+type Tab = 'ambassadors' | 'contracts' | 'payments' | 'content';
 
 export default function Admin() {
   const [session, setSession] = useState<SessionUser | null>(null);
@@ -22,7 +26,14 @@ export default function Admin() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('commission');
   const [sortAsc, setSortAsc] = useState(false);
+  const [range, setRange] = useState<DateRange>(DEFAULT_RANGE);
   const nav = useNavigate();
+  const live = useAmbassadors();
+  const projected = useMemo(() => viewForRange(live, range), [live, range]);
+  const AMBASSADORS = projected.ambassadors;
+  const COUNTRY_BREAKDOWN = live.byCountry;
+  const MONTHLY_GROWTH = live.monthly;
+  const TOTALS = projected.totals;
 
   useEffect(() => {
     resolveSession().then(s => {
@@ -47,7 +58,7 @@ export default function Admin() {
       if (typeof av === 'string') return av.localeCompare(bv) * dir;
       return ((av as number) - (bv as number)) * dir;
     });
-  }, [country, track, search, sortKey, sortAsc]);
+  }, [country, track, search, sortKey, sortAsc, AMBASSADORS]);
 
   const installsSeries = MONTHLY_GROWTH.map(m => ({ x: m.month, y: m.installs }));
   const approvedSeries = MONTHLY_GROWTH.map(m => ({ x: m.month, y: m.approved }));
@@ -70,14 +81,17 @@ export default function Admin() {
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="chip"><span className="dot"/> Datos en vivo · Adjust + Pana DB</span>
-                <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">Actualizado hace 12 min</span>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {live.source === 'live' && <span className="chip !bg-pana-lime/15 !text-pana-lime !border-pana-lime/40"><span className="dot"/> LIVE · Adjust BigQuery</span>}
+                {live.source === 'loading' && <span className="chip"><span className="dot opacity-60"/> Cargando…</span>}
+                {live.source === 'mock' && <span className="chip !bg-amber-300/10 !text-amber-300 !border-amber-300/30"><span className="dot !bg-amber-300"/> MOCK · upstream offline</span>}
+                <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">{live.fetchedAt ? `Actualizado ${new Date(live.fetchedAt).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'})}` : ''}</span>
               </div>
               <h1 className="h-display text-4xl md:text-6xl">Admin <span className="gradient-text">Console</span></h1>
               <p className="text-white/60 mt-2 max-w-xl">Monitorea desempeño, contratos y pagos de la red completa de embajadores.</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <DateRangePicker value={range} onChange={setRange}/>
               <select value={country} onChange={e => setCountry(e.target.value as any)} className="!w-auto !py-2 !px-3 text-sm">
                 <option value="ALL">Todos los países</option>
                 {COUNTRY_BREAKDOWN.map(c => <option key={c.country} value={c.country}>{c.flag} {c.name}</option>)}
@@ -89,6 +103,13 @@ export default function Admin() {
                 <option value="Corporativo">Corporativo</option>
               </select>
             </div>
+          </div>
+
+          {/* Period banner */}
+          <div className="mb-2 text-xs text-white/50 flex items-center gap-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-pana-lime"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Periodo: <span className="text-white/85 font-bold">{fmtRange(range)}</span>
+            {!('all' in range) && range.to === new Date().toISOString().slice(0,10) && <span className="text-[10px] uppercase tracking-wider text-pana-lime font-bold">hasta hoy</span>}
           </div>
         </div>
       </section>
@@ -169,10 +190,11 @@ export default function Admin() {
       {/* Tabs */}
       <section className="pb-3">
         <div className="mx-auto max-w-7xl px-5">
-          <div className="rounded-2xl glass-strong p-1 inline-flex gap-1">
+          <div className="rounded-2xl glass-strong p-1 inline-flex gap-1 flex-wrap">
             <TabButton active={tab === 'ambassadors'} onClick={() => setTab('ambassadors')} label="Embajadores" hint={String(AMBASSADORS.length)}/>
             <TabButton active={tab === 'contracts'} onClick={() => setTab('contracts')} label="Contratos" hint={String(AMBASSADORS.filter(a => a.contract.status === 'signed').length)}/>
             <TabButton active={tab === 'payments'} onClick={() => setTab('payments')} label="Pagos" hint={`$${ALL_PAYMENTS.reduce((s, p) => s + p.amount, 0).toLocaleString()}`}/>
+            <TabButton active={tab === 'content'} onClick={() => setTab('content')} label="Contenido" hint={String(CONTENT_TOTALS.pending) + ' rev.'}/>
           </div>
         </div>
       </section>
@@ -186,6 +208,13 @@ export default function Admin() {
       )}
       {tab === 'contracts' && <ContractsTab filtered={filtered} search={search} setSearch={setSearch}/>}
       {tab === 'payments' && <PaymentsTab filtered={filtered}/>}
+      {tab === 'content' && (
+        <section className="pb-16">
+          <div className="mx-auto max-w-7xl px-5">
+            <ContentBoard variant="admin"/>
+          </div>
+        </section>
+      )}
 
       <div className="mx-auto max-w-7xl px-5 pb-10 text-[11px] text-white/40">
         <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
@@ -232,6 +261,7 @@ function AmbassadorsTab({ filtered, search, setSearch, sortKey, sortAsc, setSort
                   <Th onClick={() => toggleSort('installs', sortKey, sortAsc, setSortKey, setSortAsc)} active={sortKey === 'installs'} asc={sortAsc} label="Installs" right/>
                   <Th onClick={() => toggleSort('approved', sortKey, sortAsc, setSortKey, setSortAsc)} active={sortKey === 'approved'} asc={sortAsc} label="Aprob." right/>
                   <Th onClick={() => toggleSort('commission', sortKey, sortAsc, setSortKey, setSortAsc)} active={sortKey === 'commission'} asc={sortAsc} label="Comisión" right/>
+                  <Th label="Pana 360"/>
                 </tr>
               </thead>
               <tbody>
@@ -252,7 +282,8 @@ function AmbassadorsTab({ filtered, search, setSearch, sortKey, sortAsc, setSort
                     <Td><span className="text-white/60">{fmtDate(a.joinedAt)}</span></Td>
                     <Td right><span className="text-white/80 tabular-nums">{a.installs}</span></Td>
                     <Td right><span className="font-medium tabular-nums">{a.approved}</span></Td>
-                    <Td right className="rounded-r-xl"><span className="font-display text-pana-lime tabular-nums">${a.commission.toLocaleString()}</span></Td>
+                    <Td right><span className="font-display text-pana-lime tabular-nums">${a.commission.toLocaleString()}</span></Td>
+                    <Td className="rounded-r-xl"><Pana360Button userId={(a as any).panaUserId} name={a.name}/></Td>
                   </tr>
                 ))}
               </tbody>
@@ -548,6 +579,29 @@ function Th({ label, onClick, active, asc, right }: { label: string; onClick?: (
 
 function Td({ children, className = '', right }: { children: React.ReactNode; className?: string; right?: boolean }) {
   return <td className={`px-3 py-2.5 ${right ? 'text-right' : ''} ${className}`}>{children}</td>;
+}
+
+function Pana360Button({ userId, name }: { userId: string | null | undefined; name: string }) {
+  if (userId) {
+    return (
+      <a
+        href={`https://360.getpana.app/users/${userId}`}
+        target="_blank"
+        rel="noreferrer"
+        title={`Abrir ${name} en Pana 360`}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-pana-lime/15 text-pana-lime border border-pana-lime/40 text-[11px] font-bold hover:bg-pana-lime hover:text-pana-navy transition-colors whitespace-nowrap"
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Pana 360
+      </a>
+    );
+  }
+  return (
+    <span title={`No se encontró perfil en Pana — buscar manualmente "${name}"`} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/[0.04] text-white/40 border border-white/10 text-[11px] font-bold whitespace-nowrap cursor-not-allowed">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      No mapeado
+    </span>
+  );
 }
 
 function toggleSort(k: SortKey, curr: SortKey, asc: boolean, setK: (k: SortKey) => void, setA: (a: boolean) => void) {

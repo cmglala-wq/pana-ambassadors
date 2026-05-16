@@ -6,15 +6,22 @@ import Avatar from '../components/Avatar';
 import BadgeIcon from '../components/BadgeIcon';
 import Blob from '../components/Blob';
 import Sparkle from '../components/Sparkle';
+import LiveFeed from '../components/LiveFeed';
+import ContentBoard from '../components/ContentBoard';
+import { isAdminHost } from '../lib/hosts';
 import { resolveSession, getCurrentAmbassador, SessionUser } from '../lib/session';
+import { useAmbassadors, viewForRange } from '../lib/useAmbassadors';
 import { BADGES, BADGES_BY_ID, levelFromXP } from '../data/badges';
-import { AMBASSADORS, RECENT_EVENTS, countryFlag, countryName } from '../data/ambassadors';
+import { RECENT_EVENTS, countryFlag, countryName, type Ambassador } from '../data/ambassadors';
+import DateRangePicker, { DEFAULT_RANGE, fmtRange, type DateRange } from '../components/DateRangePicker';
 
 export default function Dashboard() {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [leaderRange, setLeaderRange] = useState<DateRange>(DEFAULT_RANGE);
   const nav = useNavigate();
+  const live = useAmbassadors();
 
   useEffect(() => {
     resolveSession().then(s => {
@@ -24,15 +31,29 @@ export default function Dashboard() {
     });
   }, [nav]);
 
+  // Hooks MUST run on every render — keep them above the early return.
+  const monthView = useMemo(() => viewForRange(live, leaderRange), [live, leaderRange]);
+
   if (loading || !session) return <LoadingShell/>;
 
-  const me = getCurrentAmbassador(session);
+  // Resolve "me" defensively against undefined session fields.
+  const sessionEmail = (session.email || '').toLowerCase();
+  const sessionFirstName = (session.name || '').split(' ')[0].toLowerCase();
+  const me: Ambassador = live.source === 'live' && live.ambassadors.length > 0
+    ? (live.ambassadors.find(a => (a.email || '').toLowerCase() === sessionEmail && sessionEmail !== '')
+       || (sessionFirstName ? live.ambassadors.find(a => a.name.toLowerCase().includes(sessionFirstName)) : null)
+       || live.ambassadors[0])
+    : getCurrentAmbassador(session);
+
   const lvl = levelFromXP(me.xp);
   const earnedSet = new Set(me.badges);
   const allBadges = BADGES;
   const earned = allBadges.filter(b => earnedSet.has(b.id));
   const locked = allBadges.filter(b => !earnedSet.has(b.id));
-  const top10 = AMBASSADORS.slice(0, 10);
+
+  const top10 = monthView.ambassadors.slice(0, 10);
+  const myInLeader = monthView.ambassadors.find(a => a.id === me.id || a.name === me.name);
+  const myLeaderRank = myInLeader?.rank || 0;
   const myRank = me.rank || 0;
   const greeting = useGreeting();
   const referralCode = `pana.app/r/${me.email.split('@')[0]}`;
@@ -53,10 +74,12 @@ export default function Dashboard() {
         <Blob className="absolute top-40 -left-24 w-[380px] opacity-40 animate-floaty [animation-delay:2s]" tone="blue"/>
 
         <div className="mx-auto max-w-6xl px-5 relative">
-          <div className="text-xs text-white/40 mb-5 flex items-center gap-2">
+          <div className="text-xs text-white/40 mb-5 flex items-center gap-2 flex-wrap">
             <Link to="/" className="hover:text-white/70">Inicio</Link>
             <span>/</span>
             <span className="text-white/70">Portal Embajador</span>
+            {live.source === 'live' && <span className="ml-3 text-[10px] uppercase tracking-[0.16em] text-pana-lime font-bold flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-pana-lime shadow-[0_0_8px_rgba(207,255,4,0.8)]"/> LIVE · Adjust BigQuery</span>}
+            {live.source === 'mock' && <span className="ml-3 text-[10px] uppercase tracking-[0.16em] text-amber-300 font-bold">DEMO</span>}
           </div>
 
           <div className="grid lg:grid-cols-[1.5fr,1fr] gap-4 animate-fadeUp">
@@ -154,16 +177,20 @@ export default function Dashboard() {
         <div className="mx-auto max-w-6xl px-5 grid lg:grid-cols-[1.5fr,1fr] gap-4">
           {/* Leaderboard */}
           <div className="rounded-3xl glass p-6 md:p-8">
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-start justify-between mb-5 gap-3">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.18em] text-pana-lime font-bold">Leaderboard</div>
                 <h3 className="h-display text-2xl md:text-3xl mt-1">Top 10 global</h3>
               </div>
-              <div className="text-xs text-white/40">Abril 2026</div>
+              <DateRangePicker
+                value={leaderRange}
+                onChange={setLeaderRange}
+                size="sm"
+              />
             </div>
             <div className="space-y-1.5">
               {top10.map(a => {
-                const isMe = a.id === me.id;
+                const isMe = a.id === me.id || a.name === me.name;
                 return (
                   <div key={a.id} className={`flex items-center gap-3 p-2.5 rounded-2xl transition-colors ${isMe ? 'bg-pana-lime/[0.08] ring-1 ring-pana-lime/30' : 'hover:bg-white/[0.04]'}`}>
                     <div className={`w-8 text-center font-display text-lg ${a.rank === 1 ? 'text-amber-300' : a.rank === 2 ? 'text-zinc-300' : a.rank === 3 ? 'text-orange-400' : 'text-white/40'}`}>{a.rank}</div>
@@ -172,49 +199,37 @@ export default function Dashboard() {
                       <div className="font-semibold text-sm truncate flex items-center gap-2">
                         {a.name} {isMe && <span className="text-[9px] uppercase tracking-wider text-pana-lime font-bold">Tú</span>}
                       </div>
-                      <div className="text-[11px] text-white/50">{countryFlag(a.country)} {a.track} · {a.approved} cuentas</div>
+                      <div className="text-[11px] text-white/50">{a.installs} installs · {a.streak ? `${a.streak}d streak` : 'inactivo'}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-sm text-pana-lime">${a.commission.toLocaleString()}</div>
-                      <div className="text-[10px] text-white/40">{a.streak}d streak</div>
+                      <div className="font-display text-base text-white">{a.approved}</div>
+                      <div className="text-[10px] text-white/40 uppercase tracking-wider">cuentas</div>
                     </div>
                   </div>
                 );
               })}
+              {top10.length === 0 && (
+                <div className="text-center py-8 text-white/40 text-sm">
+                  Sin actividad en {fmtRange(leaderRange)}.
+                </div>
+              )}
             </div>
 
-            {myRank > 10 && (
+            {myInLeader && myLeaderRank > 10 && top10[9] && (
               <div className="mt-3 rounded-2xl bg-pana-lime/[0.08] border border-pana-lime/30 p-3 flex items-center gap-3">
-                <div className="w-8 text-center font-display text-lg text-pana-lime">{myRank}</div>
+                <div className="w-8 text-center font-display text-lg text-pana-lime">{myLeaderRank}</div>
                 <Avatar src={me.photo} name={me.name} size={32} ring="lime"/>
                 <div className="flex-1">
                   <div className="text-sm font-bold">Tú · {me.name}</div>
-                  <div className="text-xs text-white/50">{me.approved} cuentas · ${me.commission.toLocaleString()}</div>
+                  <div className="text-xs text-white/50">{myInLeader.approved} cuentas aprobadas</div>
                 </div>
-                <div className="text-[10px] text-white/50 text-right">Faltan {top10[9].approved - me.approved + 1} cuentas para entrar al Top 10</div>
+                <div className="text-[10px] text-white/50 text-right">Faltan {Math.max(1, top10[9].approved - myInLeader.approved + 1)} cuentas para entrar al Top 10</div>
               </div>
             )}
           </div>
 
-          {/* Activity */}
-          <div className="rounded-3xl glass p-6">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-pana-lime font-bold mb-4">En la red, ahora</div>
-            <div className="space-y-3">
-              {RECENT_EVENTS.map((e, i) => (
-                <div key={i} className="flex items-start gap-3 animate-fadeUp" style={{ animationDelay: `${i * 80}ms` }}>
-                  <img src={e.photo} alt={e.who} loading="lazy" className="w-9 h-9 rounded-full object-cover ring-1 ring-white/10"/>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm">
-                      <span className="font-bold text-white">{e.who}</span>{' '}
-                      <span className="text-white/60">{e.text}</span>
-                    </div>
-                    <div className="text-[11px] text-white/40">{relTime(e.ts)}</div>
-                  </div>
-                  <span className={`mt-1 w-1.5 h-1.5 rounded-full ${e.type === 'unlock' ? 'bg-pana-lime' : e.type === 'rank' ? 'bg-fuchsia-400' : 'bg-pana-blue'}`}/>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Right column — switches based on whether we're on admin (live data) or public (mock) */}
+          {isAdminHost() ? <LiveFeed currentAmbassadorName={me.name}/> : <ContentBoard variant="compact" ambassadorName={me.name}/>}
         </div>
       </section>
 
@@ -253,7 +268,7 @@ export default function Dashboard() {
   );
 }
 
-function nextMissions(me: ReturnType<typeof getCurrentAmbassador>, top10: typeof AMBASSADORS) {
+function nextMissions(me: Ambassador, top10: Ambassador[]) {
   const isTop10 = (me.rank || 99) <= 10;
   const isTop3 = (me.rank || 99) <= 3;
   return [
